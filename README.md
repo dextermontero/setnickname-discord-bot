@@ -25,5 +25,6 @@ python  main.py
 ```sh
 !setnick <enter  your  desire  nickname>
 !setlogs <channel_id>
+!setchannel <channel_id>
 !helps
 ```
