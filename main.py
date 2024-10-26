@@ -1,4 +1,5 @@
 import discord, json, asyncio
+# import logging
 from discord.ext import commands
 from decouple import config
 
@@ -49,6 +50,7 @@ async def help_command(ctx):
     commands_list = [
         '!setlogs - Setup your audit logs for admin using: `!setlogs channel_id`.',
         '!setnick - Setup your In-Game Name using: `!setnick your_nickname`',
+        '!delnick - Remove nickname of member using: `!delnick member_id`',
         '!setchannel - Set up your channel to change the nicknames of existing members.'
     ]
 
@@ -91,6 +93,26 @@ async def setnick(ctx, *, new_nickname: str):
             await ctx.send("An error occurred while trying to change your nickname.")
     else:
         await ctx.send("I don't have permission to manage nicknames in this server.")
+
+@bot.command(name='delnick')
+@commands.has_permissions(manage_nicknames=True)
+async def delnick(ctx, nickname_id: str):
+    load_nickname = load_settings()
+    try:
+        guild_data = load_nickname[str(ctx.guild.id)]
+
+        if nickname_id in guild_data['nicknames']:
+            del guild_data['nicknames'][nickname_id]
+            save_settings(load_nickname)
+            await ctx.send(f"```fix\nNickname with ID {nickname_id} has been removed.```")
+        else:
+            await ctx.send('```fix\nNickname ID not found!```')
+
+        # logging.info(f"Nickname ID {nickname_id} removed by {ctx.author} from guild {ctx.guild.id}.")
+    except KeyError:
+        await ctx.send("Error: This guild does not have any associated data.")
+    except Exception as e:
+        await ctx.send(f"An error occurred: {str(e)}")
 
 @bot.command(name='setlogs')
 @commands.has_permissions(manage_channels=True)
