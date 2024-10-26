@@ -26,5 +26,6 @@ python  main.py
 !setnick <enter  your  desire  nickname>
 !setlogs <channel_id>
 !setchannel <channel_id>
+!delnick <user_id>
 !helps
 ```
