@@ -2,6 +2,7 @@ import discord, json, asyncio
 # import logging
 from discord.ext import commands
 from decouple import config
+from discord import HTTPException
 
 TOKEN = config("DISCORD_TOKEN")
 SERVER_DATA = "settings.json"
@@ -39,8 +40,10 @@ async def on_command_error(ctx, error):
         error_message = "You don't have the required role to use this command."
     elif isinstance(error, commands.MissingPermissions):
         error_message = "You need the manage channels permission to use this command."
+    elif isinstance(error, HTTPException) and error.status == 429:
+        error_message = "Rate limit hit. Please try again later."
     else:
-        raise error
+        error_message = "An unexpected error occurred."
 
     embed = discord.Embed(title="Error", description=error_message, color=discord.Color.red())
     await ctx.send(embed=embed)
@@ -58,6 +61,7 @@ async def help_command(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name='setnick')
+@commands.cooldown(1, 5, commands.BucketType.user)  # 1 use every 5 seconds
 async def setnick(ctx, *, new_nickname: str):
     guild_id = str(ctx.guild.id)
     user_id = str(ctx.author.id)
@@ -95,6 +99,7 @@ async def setnick(ctx, *, new_nickname: str):
         await ctx.send("I don't have permission to manage nicknames in this server.")
 
 @bot.command(name='delnick')
+@commands.cooldown(1, 5, commands.BucketType.user)  # 1 use every 5 seconds
 @commands.has_permissions(manage_nicknames=True)
 async def delnick(ctx, nickname_id: str):
     load_nickname = load_settings()
@@ -199,7 +204,7 @@ async def handle_temp_channel(member, temp_channel):
     try:
         msg = await bot.wait_for('message', check=check, timeout=300)
         new_nickname = msg.content[len('!setnick '):]
-        # await member.edit(nick=new_nickname)
+        await member.edit(nick=new_nickname)
         channel_id = load_settings()[str(member.guild.id)].get('audit_logs_id')
         if channel_id:
             audit_logs = bot.get_channel(int(channel_id))
