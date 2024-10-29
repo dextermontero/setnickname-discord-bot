@@ -1,0 +1,10 @@
+services:
+  discord-bot:
+    container_name: discord-setnickname
+    restart: always
+    build: 
+        context: .
+        dockerfile: Dockerfile.dev
+    volumes:
+      - .:/docker-setnickname-bot
+    
