@@ -1,10 +1,16 @@
 import discord, json, asyncio
 # import logging
-from discord.ext import commands
-from decouple import config
+from discord.ext import tasks, commands
+import os
+from dotenv import load_dotenv
 from discord import HTTPException
 
-TOKEN = config("DISCORD_TOKEN")
+# Clearing the environment variables
+os.environ.clear()
+# Loading the environment variables
+load_dotenv()
+
+TOKEN = os.getenv('DISCORD_TOKEN')
 SERVER_DATA = "settings.json"
 
 intents = discord.Intents.default()
@@ -31,6 +37,11 @@ bot.help_command = None
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+    send_periodic_message.start()
+
+@tasks.loop(minutes=50)
+async def send_periodic_message():
+    print('Status: OK')
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -83,7 +94,7 @@ async def setnick(ctx, *, new_nickname: str):
     audit_logs_id = load_nickname[guild_id].get('channel_logs_id')
     
     if not ctx.channel.name.startswith(temp_channel_prefix) and ctx.channel.id != audit_logs_id:
-            return await ctx.send("```fix\nYou can't use !setnick in this channel!```")
+        return await ctx.send("```fix\nYou can't use !setnick in this channel!```")
 
     if ctx.guild.me.guild_permissions.manage_nicknames:
         try:
@@ -174,7 +185,6 @@ async def on_member_join(member):
 async def create_temp_channel(member):
     guild = member.guild
 
-
     async def delete_temp_channels(guild):
         temp_channel_prefix = "temp-channel-bot"
         for channel in guild.channels:
@@ -208,10 +218,13 @@ async def handle_temp_channel(member, temp_channel):
         channel_id = load_settings()[str(member.guild.id)].get('audit_logs_id')
         if channel_id:
             audit_logs = bot.get_channel(int(channel_id))
-            await audit_logs.send(f'{member.name} has set their nickname to **{new_nickname}**!')
+            try:
+                await audit_logs.send(f'{member.name} has set their nickname to **{new_nickname}**!')
+            except discord.errors.Forbidden:
+                print(f"Bot does not have permission to send messages in the channel with ID {channel_id}")
         await asyncio.sleep(5)
         await temp_channel.delete()
     except asyncio.TimeoutError:
-        await temp_channel.send(f'{member.mention}, you took too long to set your nickname!')   
+        await temp_channel.send(f'{member.mention}, you took too long to set your nickname!')
 
 bot.run(TOKEN)
