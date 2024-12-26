@@ -1,13 +1,14 @@
-import discord, json, asyncio
+import discord, json
+import asyncio
+import time
+import aiohttp
 # import logging
 from discord.ext import tasks, commands
-import os
 from dotenv import load_dotenv
+import os
 from discord import HTTPException
 
-# Clearing the environment variables
-os.environ.clear()
-# Loading the environment variables
+# # Loading the environment variables
 load_dotenv()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -38,6 +39,19 @@ bot.help_command = None
 async def on_ready():
     print(f"Logged in as {bot.user}")
     send_periodic_message.start()
+
+async def run_bot():
+    retries = 5
+    for i in range(retries):
+        try:
+            await bot.start(TOKEN)
+            break
+        except aiohttp.client_exceptions.ClientConnectorError as e:
+            print(f"Connection failed: {e}. Retrying in 5 seconds...")
+            await asyncio.sleep(5)
+    else:
+        print("Failed to connect after several retries.")
+        await bot.close()
 
 @tasks.loop(minutes=50)
 async def send_periodic_message():
@@ -227,4 +241,4 @@ async def handle_temp_channel(member, temp_channel):
     except asyncio.TimeoutError:
         await temp_channel.send(f'{member.mention}, you took too long to set your nickname!')
 
-bot.run(TOKEN)
+asyncio.run(run_bot())
